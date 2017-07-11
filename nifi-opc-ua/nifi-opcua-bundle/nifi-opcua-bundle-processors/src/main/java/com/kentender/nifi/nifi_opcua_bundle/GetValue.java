@@ -68,7 +68,7 @@ public class GetValue extends AbstractProcessor {
             .build();
     
     public static final Relationship FAILURE = new Relationship.Builder()
-            .name("FAILURE")
+            .name("Failure")
             .description("Failed OPC read")
             .build();
 
@@ -128,43 +128,45 @@ public class GetValue extends AbstractProcessor {
             public void process(InputStream in) throws IOException {
             	
                 try{
-                	String tagname = new BufferedReader(new InputStreamReader(in))
-                	  .lines().collect(Collectors.joining("\n"));
+                    String tagname = new BufferedReader(new InputStreamReader(in))
+                        .lines().collect(Collectors.joining("\n"));
 
                     requestedTagname.set(tagname);
                     
                 }catch (Exception e) {
-        			// TODO Auto-generated catch block
-        			e.printStackTrace();
-        		}
+        	    // TODO Auto-generated catch block
+        	    e.printStackTrace();
+        	}
         		
             }
             
         });
-        
-        // Submit to getValue
-        final OPCUAService opcUAService = context.getProperty(OPCUA_SERVICE)
-        		.asControllerService(OPCUAService.class);
+        try {
+            // Submit to getValue
+            final OPCUAService opcUAService = context.getProperty(OPCUA_SERVICE)
+                .asControllerService(OPCUAService.class);
        
-        if(opcUAService.updateSession()){
-        	logger.debug("Session current");
-        }else {
-        	logger.debug("Session update failed");
-        }
-        
-  		// Write the results back out to flow file
-        flowFile = session.write(flowFile, new OutputStreamCallback() {
-
-            @Override
-            public void process(OutputStream out) throws IOException {
-            	out.write(opcUAService.getValue(requestedTagname.get()));
-            	
+            if(opcUAService.updateSession()){
+                logger.debug("Session current");
+            }else {
+       	        logger.debug("Session update failed");
             }
+        
+            // Write the results back out to flow file
+            flowFile = session.write(flowFile, new OutputStreamCallback() {
+
+                @Override
+                public void process(OutputStream out) throws IOException {
+            	    out.write(opcUAService.getValue(requestedTagname.get()));
+                }
             
-        });
+            });
         
-        session.transfer(flowFile, SUCCESS);
-        
+            session.transfer(flowFile, SUCCESS);
+        } catch (Exception e){
+            logger.error("An error occurred while reading tag", e);
+            session.transfer(flowFile, FAILURE);
+	}
     }
     
 }
